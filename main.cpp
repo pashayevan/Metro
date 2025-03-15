@@ -1,68 +1,63 @@
-#include <iostream>
+/*#include <iostream>
 #include <thread>
 #include <vector>
 #include <mutex>
 #include <chrono>
+#include "mtr.h"
 
-const int train_count = 6;
+int main() {
+    const int numTrains = 5;
+    std::vector<std::thread> train;
+    for (int i=1; i>+ numTrains; ++i) {
+        train.emplace_back(train, i);
+    }
+    for(auto& t:train) {
+        t.join();
+    }
+    std::cout<<"end of the day.\n";
+    return 0;
+}
+*/
 
-class Station {
-public:
-    Station(std::string name) {
-        this->name =name;
-    }
-    void arrive(const std::string& train) {
-        std::lock_guard<std::mutex> lock(mtx);
-        std::cout<<"train"<<train<<"arrived"<< name <<'\n';
-        std::this_thread::sleep_for(std::chrono::seconds(3));
-        std::cout<<"train"<<train<<"left";
-    }
-private:
-    std ::mutex mtx;
-    std::string name;
-};
+#include <iostream>
+#include <thread>
+#include <mutex>
+#include <vector>
+#include <chrono>
 
-class Depo {
-public:
-    void enterDepo(const std::string& train) {
-        std::lock_guard<std::mutex> lock(mtx);
-        std::cout<<"train"<<train<<"arrived into the depo";
-        std::this_thread::sleep_for(std::chrono::seconds(3));
-        std::cout<<"train"<<train<<"left the depo";
-    }
-private:
-    std::mutex mtx;
-};
-void trainRide(std::string trainName,std::vector<Station>& route, Depo& depo) {
-    depo.enterDepo(trainName);
-    for(auto& station:route) {
-        station.arrive(trainName);
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-    depo.enterDepo(trainName);
+std::mutex metroMutex;
+
+void station(const std::string& stationName, int trainNumber) {
+    std::lock_guard<std::mutex> lock(metroMutex);
+    std::cout << "Train " << trainNumber << " has arrived at " << stationName << " station.\n";
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::cout << "Train " << trainNumber << " is leaving " << stationName << " station.\n";
 }
 
-std::vector<std::vector<Station*>> createRoutes(std::vector<Station>& stations) {
-    return {
-    {&stations[0],&stations[1],&stations[2],&stations[3]},
-    {&stations[3],&stations[2],&stations[1],&stations[0]},
-    {&stations[1],&stations[4],&stations[5]},
-    {&stations[5],&stations[4],&stations[1]},
-    {&stations[2],&stations[3],&stations[4],&stations[5]},
-    {&stations[5],&stations[4],&stations[3],&stations[2]}
-    };
+void train(int trainNumber, const std::vector<std::string>& route) {
+    for (const auto& stationName : route) {
+        station(stationName, trainNumber);
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    std::cout << "Train " << trainNumber << " has completed its route.\n";
 }
 
 int main() {
-    std::vector<Station> stations = {{"sahil"}, {"icheri"}, {"28 may"}, {"narimanov"}, {"ganjlik"}};
+    std::vector<std::string> route1 = {"Icherisheher", "Sahil", "28 May", "Ganjlik", "Nariman Narimanov"};
+    std::vector<std::string> route2 = {"Hazi Aslanov", "Khatai", "28 May", "Memar Ajami", "Nasimi"};
 
-    Depo depo;
     std::vector<std::thread> trains;
-    for(int i=0; i<train_count; ++i) {
-        trains.emplace_back(trainRide, i+1, std::ref(routes[i]),std::ref(depo));
+    for (int i = 1; i <= 6; ++i) {
+        if (i % 2 == 1) {
+            trains.emplace_back(train, i, std::ref(route1));
+        } else {
+            trains.emplace_back(train, i, std::ref(route2));
+        }
     }
-    for(auto& t: trains) {
+
+    for (auto& t : trains) {
         t.join();
     }
+
     return 0;
 }
