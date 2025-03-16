@@ -1,62 +1,73 @@
 #include <iostream>
-#include <thread>
-#include <mutex>
 #include <vector>
-#include <chrono>
-
-std::mutex metroMutex;
-std::mutex depotMutex;
-
-void station(const std::string& stationName, int trainNumber) {
-    std::lock_guard<std::mutex> lock(metroMutex);
-    std::cout << "Train " << trainNumber << " has arrived at " << stationName << " station.\n";
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    std::cout << "Train " << trainNumber << " is leaving " << stationName << " station.\n";
-}
-
-void train(int trainNumber, const std::vector<std::string>& route) {
-    for (const auto& stationName : route) {
-        station(stationName, trainNumber);
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-    std::cout << "Train " << trainNumber << " has completed its route and is returning to the depot.\n";
-}
-
-void returnToDepot(int trainNumber) {
-    std::lock_guard<std::mutex> lock(depotMutex);
-    std::cout << "Train " << trainNumber << " has arrived at the depot.\n";
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    std::cout << "Train " << trainNumber << " is now stationed in the depot.\n";
-}
+#include <thread>
+#include "Station.h"
+#include "Train.h"
 
 int main() {
-    std::vector<std::string> redLine = {"Icherisheher", "Sahil", "28 May", "Ganjlik", "Nariman Narimanov"};
-    std::vector<std::string> greenLine = {"Hazi Aslanov", "Khatai", "28 May", "Memar Ajami", "Nasimi"};
-    std::vector<std::string> blueLine = {"Darnagul", "Azadlig Prospekti", "Nizami", "20 Yanvar", "Inshaatchilar"};
+    // Создание станций для красной линии
+    std::vector<Station> redLineStations = {
+        Station("Icherisheher"),
+        Station("Sahil"),
+        Station("28 May"),
+        Station("Gara Garayev"),
+        Station("Neftchilar"),
+        Station("Khatai"),
+        Station("Hazi Aslanov")
+    };
 
-    std::vector<std::thread> trains;
-    for (int i = 1; i <= 6; ++i) {
-        if (i % 3 == 1) {
-            trains.emplace_back(train, i, std::ref(redLine));
-        } else if (i % 3 == 2) {
-            trains.emplace_back(train, i, std::ref(greenLine));
-        } else {
-            trains.emplace_back(train, i, std::ref(blueLine));
-        }
+    // Создание станций для зелёной линии
+    std::vector<Station> greenLineStations = {
+        Station("28 May"),
+        Station("Jafar Jabbarly"),
+        Station("Ganjlik"),
+        Station("Nariman Narimanov"),
+        Station("Bakmil"),
+        Station("Ulduz"),
+        Station("Koroglu"),
+        Station("Khalglar Dostlugu"),
+        Station("Ahmadli"),
+        Station("Hazi Aslanov")
+    };
+
+    // Создание станций для фиолетовой линии
+    std::vector<Station> purpleLineStations = {
+        Station("Memar Ajami 2"),
+        Station("Avtovagzal"),
+        Station("8 Noyabr"),
+        Station("Khojasan")
+    };
+
+    // Функция для создания маршрута туда и обратно
+    auto createRoute = [](std::vector<Station>& stations) {
+        std::vector<Station*> route;
+        for (auto& station : stations) route.push_back(&station);
+        for (int i = stations.size() - 2; i >= 0; --i) route.push_back(&stations[i]);
+        return route;
+    };
+
+    // Создание маршрутов для каждой линии
+    auto redLineRoute = createRoute(redLineStations);
+    auto greenLineRoute = createRoute(greenLineStations);
+    auto purpleLineRoute = createRoute(purpleLineStations);
+
+    // Создание поездов для каждой линии
+    std::vector<Train> trains;
+    for (int i = 1; i <= 2; ++i) {
+        trains.emplace_back("Red Line Train " + std::to_string(i), redLineRoute);
+        trains.emplace_back("Green Line Train " + std::to_string(i), greenLineRoute);
+        trains.emplace_back("Purple Line Train " + std::to_string(i), purpleLineRoute);
     }
 
-    for (auto& t : trains) {
-        t.join();
+    // Запуск поездов в отдельных потоках
+    std::vector<std::thread> threads;
+    for (auto& train : trains) {
+        threads.emplace_back(std::ref(train));
     }
 
-    // Return all trains to depot
-    trains.clear(); // Clear the vector to reuse it
-    for (int i = 1; i <= 6; ++i) {
-        trains.emplace_back(returnToDepot, i);
-    }
-
-    for (auto& t : trains) {
-        t.join();
+    // Ожидание завершения всех потоков
+    for (auto& thread : threads) {
+        thread.join();
     }
 
     return 0;
