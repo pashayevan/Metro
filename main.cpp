@@ -1,74 +1,113 @@
 #include <iostream>
-#include <vector>
 #include <thread>
-#include "Station.h"
-#include "Train.h"
+#include <vector>
+#include <functional>
+#include <chrono>
+#include <mutex>
+#include <condition_variable>
+#include <unordered_map>
+#include <string>
+#include <fstream>
+
+struct StationState {
+    int forwardTrains = 0;
+    int backwardTrains = 0;
+};
+std::unordered_map<std::string, StationState> stationStates;
+
+std::ofstream purpleFile("purple.txt", std::ios::app);
+std::ofstream yellowFile("yellow.txt", std::ios::app);
+std::mutex fileMutex, consoleMutex, stationMutex, independentMutex;
+std::condition_variable stationCv, independentCv;
+int trainsInTunnel = 0, independentTrainsInTunnel = 0;
+const int maxTrainsInTunnel = 2, maxIndependentTrains = 2;
+
+void printMessage(const std::string& message, bool isPurple, bool isYellow, const std::string& direction) {
+    std::string fullMessage = message + " [Direction: " + direction + "]";
+    std::lock_guard<std::mutex> lock(fileMutex);
+    (isPurple ? purpleFile : (isYellow ? yellowFile : std::cout)) << fullMessage << "\n";
+    if (!isPurple && !isYellow) std::cout.flush();
+}
+
+void station(const std::string& trainId, const std::string& name, bool isForward, bool isPurple, bool isYellow, const std::string& direction) {
+    std::unique_lock<std::mutex> lock(isPurple || isYellow ? independentMutex : stationMutex);
+    auto& cv = (isPurple || isYellow) ? independentCv : stationCv;
+    int& tunnelCount = (isPurple || isYellow) ? independentTrainsInTunnel : trainsInTunnel;
+    const int maxTunnel = (isPurple || isYellow) ? maxIndependentTrains : maxTrainsInTunnel;
+
+    cv.wait(lock, [&] {
+        StationState& state = stationStates[name];
+        return tunnelCount < maxTunnel && ((name == "Khojasan" || name == "IcheriSheher") ? state.forwardTrains + state.backwardTrains == 0 : (isForward ? state.forwardTrains == 0 : state.backwardTrains == 0));
+    });
+
+    tunnelCount++;
+    StationState& state = stationStates[name];
+    isForward ? state.forwardTrains++ : state.backwardTrains++;
+
+    printMessage("Train " + trainId + " arrived at " + name + " (Trains in tunnel: " + std::to_string(tunnelCount) + ")", isPurple, isYellow, direction);
+    lock.unlock();
+    std::this_thread::sleep_for(std::chrono::seconds(4));
+    lock.lock();
+
+    printMessage("Train " + trainId + " departed from " + name, isPurple, isYellow, direction);
+    isForward ? state.forwardTrains-- : state.backwardTrains--;
+    tunnelCount--;
+
+    printMessage("Train " + trainId + " left tunnel (Trains in tunnel: " + std::to_string(tunnelCount) + ")", isPurple, isYellow, direction);
+    lock.unlock();
+    cv.notify_all();
+}
+
+#define DEFINE_STATION(name) \
+    void name(const std::string& trainId, bool isForward, bool isPurple, const std::string& direction) { station(trainId, #name, isForward, isPurple, false, direction); } \
+    void name##Yellow(const std::string& trainId, bool isForward, bool isPurple, const std::string& direction) { station(trainId, #name, isForward, isPurple, true, direction); }
+
+DEFINE_STATION(HaziAslanov)
+DEFINE_STATION(Ahmadli)
+DEFINE_STATION(KhalglarDostlugu)
+DEFINE_STATION(Neftchilar)
+DEFINE_STATION(GaraGarayev)
+DEFINE_STATION(Koroglu)
+DEFINE_STATION(Ulduz)
+DEFINE_STATION(Bakmil)
+DEFINE_STATION(Narimanov)
+DEFINE_STATION(Ganjlik)
+DEFINE_STATION(May28)
+DEFINE_STATION(Sahil)
+DEFINE_STATION(IcheriSheher)
+DEFINE_STATION(JafarJabbarly)
+DEFINE_STATION(Nizami)
+DEFINE_STATION(ElmlerAkademiyasi)
+DEFINE_STATION(Inshaatchilar)
+DEFINE_STATION(January20)
+DEFINE_STATION(MemarAjami)
+DEFINE_STATION(Nasimi)
+DEFINE_STATION(AzadligProspekti)
+DEFINE_STATION(Avtovagzal)
+DEFINE_STATION(Khojasan)
+DEFINE_STATION(Darnagul)
+DEFINE_STATION(Noyabr8)
+DEFINE_STATION(AvtoVogzal)
+DEFINE_STATION(MemarAjami2)
+DEFINE_STATION(KhojasanPurple)
+DEFINE_STATION(Khatai)
 
 int main() {
-    // Создание станций для красной линии
-    std::vector<Station> redLineStations = {
-        Station("Icherisheher"),
-        Station("Sahil"),
-        Station("28 May"),
-        Station("Gara Garayev"),
-        Station("Neftchilar"),
-        Station("Khatai"),
-        Station("Hazi Aslanov")
-    };
-
-    // Создание станций для зелёной линии
-    std::vector<Station> greenLineStations = {
-        Station("28 May"),
-        Station("Jafar Jabbarly"),
-        Station("Ganjlik"),
-        Station("Nariman Narimanov"),
-        Station("Bakmil"),
-        Station("Ulduz"),
-        Station("Koroglu"),
-        Station("Khalglar Dostlugu"),
-        Station("Ahmadli"),
-        Station("Hazi Aslanov")
-    };
-
-    // Создание станций для фиолетовой линии
-    std::vector<Station> purpleLineStations = {
-        Station("Memar Ajami 2"),
-        Station("Avtovagzal"),
-        Station("8 Noyabr"),
-        Station("Khojasan")
-    };
-
-    // Функция для создания маршрута туда и обратно
-    auto createRoute = [](std::vector<Station>& stations) {
-        std::vector<Station*> route;
-        for (auto& station : stations) route.push_back(&station);
-        for (int i = stations.size() - 2; i >= 0; --i) route.push_back(&stations[i]);
-        return route;
-    };
-
-    // Создание маршрутов для каждой линии
-    auto redLineRoute = createRoute(redLineStations);
-    auto greenLineRoute = createRoute(greenLineStations);
-    auto purpleLineRoute = createRoute(purpleLineStations);
-
-    // Создание поездов для каждой линии
-    std::vector<Train> trains;
-    for (int i = 1; i <= 2; ++i) {
-        trains.emplace_back("Red Line Train " + std::to_string(i), redLineRoute);
-        trains.emplace_back("Green Line Train " + std::to_string(i), greenLineRoute);
-        trains.emplace_back("Purple Line Train " + std::to_string(i), purpleLineRoute);
+    if (!purpleFile.is_open() || !yellowFile.is_open()) {
+        std::cerr << "Error: Could not open log files" << std::endl;
+        return 1;
     }
 
-    // Запуск поездов в отдельных потоках
-    std::vector<std::thread> threads;
-    for (auto& train : trains) {
-        threads.emplace_back(std::ref(train));
+    std::vector<std::thread> trains;
+    std::vector<std::function<void(const std::string&, bool, bool, const std::string&)>> redRoute = { Bakmil, Ulduz, Koroglu, GaraGarayev, Neftchilar, KhalglarDostlugu, Ahmadli, HaziAslanov };
+    std::vector<std::function<void(const std::string&, bool, bool, const std::string&)>> greenRoute = { Bakmil, Narimanov, Ganjlik, May28, Nizami, ElmlerAkademiyasi, Inshaatchilar, January20, MemarAjami, Nasimi, AzadligProspekti, Avtovagzal, Khojasan, Darnagul };
+
+    for (int i = 0; i < 4; i++) {
+        trains.emplace_back([=] { for (int j = 0; j < 2; j++) { for (auto& station : redRoute) station("redLine" + std::to_string(i+1), true, false, "Icheri Sheher"); }});
+        trains.emplace_back([=] { for (int j = 0; j < 2; j++) { for (auto& station : greenRoute) station("greenLine" + std::to_string(i+1), true, false, "Darnagul"); }});
     }
 
-    // Ожидание завершения всех потоков
-    for (auto& thread : threads) {
-        thread.join();
-    }
-
+    for (auto& t : trains) t.join();
+    std::cout << "All trains have returned to depots." << std::endl;
     return 0;
 }
