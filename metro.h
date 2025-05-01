@@ -4,9 +4,9 @@
 #include <string>
 #include <mutex>
 
-class Station {
+class metro {
 public:
-    explicit Station(const std::string& stationName);
+    explicit metro(const std::string& stationName);
     void trainArrives(const std::string& trainID);
     void trainDeparts(const std::string& trainID);
 
