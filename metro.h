@@ -1,18 +1,34 @@
-#ifndef STATION_H
-#define STATION_H
+#ifndef METRO_H
+#define METRO_H
 
-#include <string>
+#include <iostream>
+#include <thread>
 #include <mutex>
+#include <vector>
+#include <string>
+#include <map>
 
-class metro {
+class Metro {
 public:
-    explicit metro(const std::string& stationName);
-    void trainArrives(const std::string& trainID);
-    void trainDeparts(const std::string& trainID);
+    Metro();
+    void run();
 
 private:
-    std::string name;
-    std::mutex stationMutex;
+    struct Line {
+        std::vector<std::string> stations;
+        std::string depot;
+        bool is_shuttle = false;
+    };
+
+    std::map<std::string, Line> lines;
+    std::mutex cout_mutex;
+
+    void train(int train_id, const std::string& line_name, int direction);
+    void safe_print(const std::string& message);
+    void move_to_station(int train_id, const std::string& line_name,
+                       std::map<std::string, std::mutex>& station_mutexes,
+                       int& current, int target,
+                       const std::vector<std::string>& stations);
 };
 
-#endif // STATION_H
+#endif // METRO_H

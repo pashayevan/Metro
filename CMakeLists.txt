@@ -4,4 +4,6 @@ project(Metro)
 set(CMAKE_CXX_STANDARD 20)
 
 add_executable(Metro
-        main.cpp)
+        main.cpp
+        metro.cpp
+        metro.h)
