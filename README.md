@@ -25,18 +25,23 @@
 
 ## 🚀 Как запустить
 
-1. Скомпилируйте проект с помощью любого компилятора C++17 и выше.
-
-Пример для компиляции с g++:
-
+### Для**Linux** / **macOS**:
 ```bash
-g++ -std=c++17 -pthread main.cpp metro.cpp -o metro_sim
+sudo apt install g++            # For Linux users
+# On macOS, g++ is installed via: xcode-select --install
+
+git clone https://github.com/pashayevan/Metro.git
+cd MetroSimulator
+g++ -std=c++17 -pthread main.cpp metro.cpp -o MetroSimulator
+./MetroSimulator
 ```
 
-2. Запустите симулятор:
-
+### Для **Windows with MinGW**:
 ```bash
-./metro_sim
+git clone https://github.com/pashayevan/Metro.git
+cd MetroSimulator
+g++ -std=c++17 -pthread main.cpp metro.cpp -o MetroSimulator.exe
+start MetroSimulator.exe
 ```
 
 ---
