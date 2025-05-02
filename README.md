@@ -25,13 +25,15 @@
 
 ## 🚀 Как запустить
 
-### Для**Linux** :
+### Для **Linux** :
 ```bash
 git clone https://github.com/pashayevan/Metro.git
 cmake -S . -B build
 cd build
 make
+./Metro //запуск
 ```
+Исполняемый файл появляется в папке build
 ---
 
 ## 🛠 Структура проекта
