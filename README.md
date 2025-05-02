@@ -27,7 +27,6 @@
 
 ### Для**Linux** :
 ```bash
-sudo apt install g++       
 git clone https://github.com/pashayevan/Metro.git
 cmake -S . -B build
 cd build
