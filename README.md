@@ -28,6 +28,7 @@
 ### Для **Linux** :
 ```bash
 git clone https://github.com/pashayevan/Metro.git
+cd Metro
 cmake -S . -B build
 cd build
 make
