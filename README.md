@@ -36,10 +36,18 @@ make
 ### Для **Windows with MinGW**:
 ```bash
 git clone https://github.com/pashayevan/Metro.git
-cd MetroSimulator
-g++ -std=c++17 -pthread main.cpp metro.cpp -o MetroSimulator.exe
-start MetroSimulator.exe
+cd Metro
+cmake -S . -B build
+cmake --build build --config Release
 ```
+
+Примечания:
+
+   - Убедитесь, что CMake добавлен в PATH.
+
+   - Если используете Visual Studio, можно открыть build как проект или выполнить сборку в командной строке Developer Command Prompt for VS.
+
+   - Если используете MinGW, перед этим убедитесь, что установлен компилятор и правильно настроено окружение.
 
 ---
 
