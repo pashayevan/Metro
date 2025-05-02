@@ -25,15 +25,13 @@
 
 ## 🚀 Как запустить
 
-### Для**Linux** / **macOS**:
+### Для**Linux** :
 ```bash
-sudo apt install g++            # For Linux users
-# On macOS, g++ is installed via: xcode-select --install
-
+sudo apt install g++       
 git clone https://github.com/pashayevan/Metro.git
-cd MetroSimulator
-g++ -std=c++17 -pthread main.cpp metro.cpp -o MetroSimulator
-./MetroSimulator
+cmake -S . -B build
+cd build
+make
 ```
 
 ### Для **Windows with MinGW**:
